@@ -13,6 +13,8 @@
 # 项目运行方式
 运行环境：Python3
 数据库：neo4j
+预训练词向量：[https://github.com/Embedding/Chinese-Word-Vectors](https://github.com/Embedding/Chinese-Word-Vectors)
+
 1、搭建知识图谱：python build_grapy.py。大概几个小时，耐心等待。
 2、启动问答测试：python kbqa_test.py
 
