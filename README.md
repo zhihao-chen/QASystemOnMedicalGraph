@@ -7,7 +7,7 @@
 
 # 项目效果 #
 以下两张图是系统实际运行效果：
-![enter description here](./images/效果图.png)
+![系统运行效果图](https://github.com/zhihao-chen/QASystemOnMedicalGraph/blob/master/img/%E6%95%88%E6%9E%9C%E5%9B%BE.png)
 
 # 项目运行方式
 运行环境：Python3
@@ -22,7 +22,7 @@
 
 **本系统的知识图谱结构如下：**
 
-![enter description here](./images/知识图谱.png)
+![知识图谱结构](https://github.com/zhihao-chen/QASystemOnMedicalGraph/blob/master/img/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1.png)
 
 
 **1.1 知识图谱实体类型**
