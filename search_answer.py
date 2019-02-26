@@ -20,13 +20,13 @@ class AnswerSearching:
                 sql_ = {}
                 sql_["intention"] = intent
                 sql = []
-                if data.get("Disease", 0) != 0:
+                if data.get("Disease"):
                    sql = self.transfor_to_sql("Disease", data["Disease"], intent)
-                if data.get("Alias", 0) != 0:
+                elif data.get("Alias"):
                     sql = self.transfor_to_sql("Alias", data["Alias"], intent)
-                if data.get("Symptom", 0) != 0:
+                elif data.get("Symptom"):
                     sql = self.transfor_to_sql("Symptom", data["Symptom"], intent)
-                if data.get("Complication", 0) != 0:
+                elif data.get("Complication"):
                     sql = self.transfor_to_sql("Complication", data["Complication"], intent)
 
                 if sql:
@@ -186,7 +186,7 @@ class AnswerSearching:
                     disease_dic[d].append(s)
             i = 0
             for k, v in disease_dic.items():
-                if i >= 20:
+                if i >= 10:
                     break
                 final_answer += "疾病 {0} 的症状有：{1}\n".format(k, ','.join(list(set(v))))
                 i += 1
@@ -196,10 +196,10 @@ class AnswerSearching:
             for data in answers:
                 d = data["d.name"]
                 disease_freq[d] = disease_freq.get(d, 0) + 1
-            n = len(disease_freq)
-            freq = sorted(disease_freq.items(), key=lambda k: k[1], reverse=True)
-            for d, v in freq[:20]:
-                final_answer += "疾病为 {0} 的概率为：{1}\n".format(d, v/n)
+            n = len(disease_freq.keys())
+            freq = sorted(disease_freq.items(), key=lambda x: x[1], reverse=True)
+            for d, v in freq[:10]:
+                final_answer += "疾病为 {0} 的概率为：{1}\n".format(d, v/10)
         # 查询治疗方法
         if intent == "query_cureway":
             disease_dic = {}
@@ -213,26 +213,26 @@ class AnswerSearching:
                     disease_dic[disease].append(drug)
             i = 0
             for d, v in disease_dic.items():
-                if i >= 20:
+                if i >= 10:
                     break
                 final_answer += "疾病 {0} 的治疗方法有：{1}；可用药品包括：{2}\n".format(d, v[0], ','.join(v[1:]))
                 i += 1
         # 查询治愈周期
         if intent == "query_period":
-           disease_dic = {}
-           for data in answers:
-               d = data['d.name']
-               p = data['d.period']
-               if d not in disease_dic:
-                   disease_dic[d] = [p]
-               else:
-                   disease_dic[d].append(p)
-           i = 0
-           for k, v in disease_dic.items():
-               if i >= 20:
-                   break
-               final_answer += "疾病 {0} 的治愈周期为：{1}\n".format(k, ','.join(list(set(v))))
-               i += 1
+            disease_dic = {}
+            for data in answers:
+                d = data['d.name']
+                p = data['d.period']
+                if d not in disease_dic:
+                    disease_dic[d] = [p]
+                else:
+                    disease_dic[d].append(p)
+            i = 0
+            for k, v in disease_dic.items():
+                if i >= 10:
+                    break
+                final_answer += "疾病 {0} 的治愈周期为：{1}\n".format(k, ','.join(list(set(v))))
+                i += 1
         # 查询治愈率
         if intent == "query_rate":
             disease_dic = {}
@@ -245,7 +245,7 @@ class AnswerSearching:
                     disease_dic[d].append(r)
             i = 0
             for k, v in disease_dic.items():
-                if i >= 20:
+                if i >= 10:
                     break
                 final_answer += "疾病 {0} 的治愈率为：{1}\n".format(k, ','.join(list(set(v))))
                 i += 1
@@ -261,7 +261,7 @@ class AnswerSearching:
                     disease_dic[d].append(r)
             i = 0
             for k, v in disease_dic.items():
-                if i >= 20:
+                if i >= 10:
                     break
                 final_answer += "疾病 {0} 的检查项目有：{1}\n".format(k, ','.join(list(set(v))))
                 i += 1
@@ -277,7 +277,7 @@ class AnswerSearching:
                     disease_dic[d].append(r)
             i = 0
             for k, v in disease_dic.items():
-                if i >= 20:
+                if i >= 10:
                     break
                 final_answer += "疾病 {0} 所属科室有：{1}\n".format(k, ','.join(list(set(v))))
                 i += 1
