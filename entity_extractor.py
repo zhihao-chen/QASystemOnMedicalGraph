@@ -2,21 +2,31 @@
 # coding: utf-8
 import os
 import ahocorasick
+from sklearn.externals import joblib
+import jieba
+import numpy as np
 
 
 class EntityExtractor:
     def __init__(self):
         cur_dir = '/'.join(os.path.abspath(__file__).split('/')[:-1])
         # 路径
-        self.vocab_path = os.path.join(cur_dir, 'DATA/vocab.txt')
-        self.stopwords_path = os.path.join(cur_dir, 'DATA/stop_words.utf8')
-        self.word2vec_path = os.path.join(cur_dir, 'DATA/merge_sgns_bigram_char300.txt')
+        self.vocab_path = os.path.join(cur_dir, 'data/vocab.txt')
+        self.stopwords_path =os.path.join(cur_dir, 'data/stop_words.utf8')
+        self.word2vec_path = os.path.join(cur_dir, 'data/merge_sgns_bigram_char300.txt')
+        # self.same_words_path = os.path.join(cur_dir, 'DATA/同义词林.txt')
         self.stopwords = [w.strip() for w in open(self.stopwords_path, 'r', encoding='utf8') if w.strip()]
 
-        self.disease_path = os.path.join(cur_dir, 'DATA/disease_vocab.txt')
-        self.symptom_path = os.path.join(cur_dir, 'DATA/symptom_vocab.txt')
-        self.alias_path = os.path.join(cur_dir, 'DATA/alias_vocab.txt')
-        self.complication_path = os.path.join(cur_dir, 'DATA/complications_vocab.txt')
+        # 意图分类模型文件
+        self.tfidf_path = os.path.join(cur_dir, 'model/tfidf_model.m')
+        self.nb_path = os.path.join(cur_dir, 'model/intent_reg_model.m')  #朴素贝叶斯模型
+        self.tfidf_model = joblib.load(self.tfidf_path)
+        self.nb_model = joblib.load(self.nb_path)
+
+        self.disease_path = data_dir + 'disease_vocab.txt'
+        self.symptom_path = data_dir + 'symptom_vocab.txt'
+        self.alias_path = data_dir + 'alias_vocab.txt'
+        self.complication_path = data_dir + 'complications_vocab.txt'
 
         self.disease_entities = [w.strip() for w in open(self.disease_path, encoding='utf8') if w.strip()]
         self.symptom_entities = [w.strip() for w in open(self.symptom_path, encoding='utf8') if w.strip()]
@@ -31,18 +41,24 @@ class EntityExtractor:
         self.symptom_tree = self.build_actree(list(set(self.symptom_entities)))
         self.complication_tree = self.build_actree(list(set(self.complication_entities)))
 
-        self.symptom_qwds = ['症状', '表征', '现象', '症候', '表现', '行为', '状况']  # 询问症状
+        self.symptom_qwds = ['什么症状', '哪些症状', '症状有哪些', '症状是什么', '什么表征', '哪些表征', '表征是什么',
+                             '什么现象', '哪些现象', '现象有哪些', '症候', '什么表现', '哪些表现', '表现有哪些',
+                             '什么行为', '哪些行为', '行为有哪些', '什么状况', '哪些状况', '状况有哪些', '现象是什么',
+                             '表现是什么', '行为是什么']  # 询问症状
         self.cureway_qwds = ['药', '药品', '用药', '胶囊', '口服液', '炎片', '吃什么药', '用什么药', '怎么办',
                              '买什么药', '怎么治疗', '如何医治', '怎么医治', '怎么治', '怎么医', '如何治',
-                             '医治方式', '疗法', '咋治', '咋办', '咋治']  # 询问治疗方法
+                             '医治方式', '疗法', '咋治', '咋办', '咋治', '治疗方法']  # 询问治疗方法
         self.lasttime_qwds = ['周期', '多久', '多长时间', '多少时间', '几天', '几年', '多少天', '多少小时',
                               '几个小时', '多少年', '多久能好', '痊愈', '康复']  # 询问治疗周期
         self.cureprob_qwds = ['多大概率能治好', '多大几率能治好', '治好希望大么', '几率', '几成', '比例',
-                              '可能性', '能治', '可治', '可以治', '可以医', '能治好吗', '可以治好吗']  # 询问治愈率
-        self.check_qwds = ['检查', '检查项目', '查出', '项目', '测出', '试出', '查看', '化验', '体检']  # 询问检查项目
-        self.belong_qwds = ['属于什么科', '属于', '什么科', '科室', '挂', '挂哪个', '哪个科', '科']  # 询问科室
+                              '可能性', '能治', '可治', '可以治', '可以医', '能治好吗', '可以治好吗', '会好吗',
+                              '能好吗', '治愈吗']  # 询问治愈率
+        self.check_qwds = ['检查什么', '检查项目', '哪些检查', '什么检查', '检查哪些', '项目', '检测什么',
+                           '哪些检测', '检测哪些', '化验什么', '哪些化验', '化验哪些', '哪些体检', '怎么查找',
+                           '如何查找', '怎么检查', '如何检查', '怎么检测', '如何检测']  # 询问检查项目
+        self.belong_qwds = ['属于什么科', '什么科', '科室', '挂什么', '挂哪个', '哪个科', '哪些科']  # 询问科室
         self.disase_qwds = ['什么病', '啥病', '得了什么', '得了哪种', '怎么回事', '咋回事', '回事',
-                            '什么情况', '情况', '问题',' 什么问题', '毛病', '什么毛病', '啥毛病']  # 询问疾病
+                            '什么情况', '什么问题', '什么毛病', '啥毛病', '哪种病']  # 询问疾病
 
     def build_actree(self, wordlist):
         """
@@ -103,8 +119,7 @@ class EntityExtractor:
         """
         import re
         import string
-        import jieba
-        from gensim.models.word2vec import KeyedVectors
+        from gensim.models import KeyedVectors
 
         jieba.load_userdict(self.vocab_path)
         self.model = KeyedVectors.load_word2vec_format(self.word2vec_path, binary=False)
@@ -131,11 +146,33 @@ class EntityExtractor:
                     flag = "Complication"
                 scores = self.simCal(word, temp[i], flag)
                 alist.extend(scores)
-        temp = sorted(alist, key=lambda k: k[1], reverse=True)
+        temp1 = sorted(alist, key=lambda k: k[1], reverse=True)
+        if temp1:
+            self.result[temp1[0][2]] = [temp1[0][0]]
 
-        self.result[temp[0][2]] = [temp[0][0]]
+    def editDistanceDP(self, s1, s2):
+        """
+        采用DP方法计算编辑距离
+        :param s1:
+        :param s2:
+        :return:
+        """
+        m = len(s1)
+        n = len(s2)
+        solution = [[0 for j in range(n + 1)] for i in range(m + 1)]
+        for i in range(len(s2) + 1):
+            solution[0][i] = i
+        for i in range(len(s1) + 1):
+            solution[i][0] = i
 
-        #return self.result
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if s1[i - 1] == s2[j - 1]:
+                    solution[i][j] = solution[i - 1][j - 1]
+                else:
+                    solution[i][j] = 1 + min(solution[i][j - 1], min(solution[i - 1][j],
+                                                                     solution[i - 1][j - 1]))
+        return solution[m][n]
 
     def simCal(self, word, entities, flag):
         """
@@ -146,26 +183,30 @@ class EntityExtractor:
         :return:
         """
         a = len(word)
-
         scores = []
         for entity in entities:
             sim_num = 0
             b = len(entity)
+            c = len(set(entity+word))
+            temp = []
             for w in word:
                 if w in entity:
                     sim_num += 1
             if sim_num != 0:
-                score1 = sim_num / min(a, b)
-            else:
-                score1 = 0
+                score1 = sim_num / c  # overlap score
+                temp.append(score1)
             try:
-                score2 = self.model.similarity(word, entity)
+                score2 = self.model.similarity(word, entity)  # 余弦相似度分数
+                temp.append(score2)
             except:
-                score2 = 0
-            if score1 and score2:
-                score = (score1 + score2) / 2
-                if score >= 0.6:
-                    scores.append((entity, score, flag))
+                pass
+            score3 = 1 - self.editDistanceDP(word, entity) / (a + b)  # 编辑距离分数
+            if score3:
+                temp.append(score3)
+
+            score = sum(temp) / len(temp)
+            if score >= 0.7:
+                scores.append((entity, score, flag))
 
         scores.sort(key=lambda k: k[1], reverse=True)
         return scores
@@ -182,6 +223,76 @@ class EntityExtractor:
                 return True
         return False
 
+    def tfidf_features(self, text, vectorizer):
+        """
+        提取问题的TF-IDF特征
+        :param text:
+        :param vectorizer:
+        :return:
+        """
+        jieba.load_userdict(self.vocab_path)
+        words = [w.strip() for w in jieba.cut(text) if w.strip() and w.strip() not in self.stopwords]
+        sents = [' '.join(words)]
+
+        tfidf = vectorizer.transform(sents).toarray()
+        return tfidf
+
+    def other_features(self, text):
+        """
+        提取问题的关键词特征
+        :param text:
+        :return:
+        """
+        features = [0] * 7
+        for d in self.disase_qwds:
+            if d in text:
+                features[0] += 1
+
+        for s in self.symptom_qwds:
+            if s in text:
+                features[1] += 1
+
+        for c in self.cureway_qwds:
+            if c in text:
+                features[2] += 1
+
+        for c in self.check_qwds:
+            if c in text:
+                features[3] += 1
+        for p in self.lasttime_qwds:
+            if p in text:
+                features[4] += 1
+
+        for r in self.cureprob_qwds:
+            if r in text:
+                features[5] += 1
+
+        for d in self.belong_qwds:
+            if d in text:
+                features[6] += 1
+
+        m = max(features)
+        n = min(features)
+        normed_features = []
+        if m == n:
+            normed_features = features
+        else:
+            for i in features:
+                j = (i - n) / (m - n)
+                normed_features.append(j)
+
+        return np.array(normed_features)
+
+    def model_predict(self, x, model):
+        """
+        预测意图
+        :param x:
+        :param model:
+        :return:
+        """
+        pred = model.predict(x)
+        return pred
+
     # 实体抽取主函数
     def extractor(self, question):
         self.entity_reg(question)
@@ -194,6 +305,18 @@ class EntityExtractor:
 
         intentions = []  # 查询意图
 
+        # 意图预测
+        tfidf_feature = self.tfidf_features(question, self.tfidf_model)
+
+        other_feature = self.other_features(question)
+        m = other_feature.shape
+        other_feature = np.reshape(other_feature, (1, m[0]))
+
+        feature = np.concatenate((tfidf_feature, other_feature), axis=1)
+
+        predicted = self.model_predict(feature, self.nb_model)
+        intentions.append([predicted[0]])
+
         # 已知疾病，查询症状
         if self.check_words(self.symptom_qwds, question) and ('Disease' in types or 'Alia' in types):
             intention = "query_symptom"
@@ -204,18 +327,15 @@ class EntityExtractor:
             intention = "query_cureway"
             intentions.append(intention)
         # 已知疾病或症状，查询治疗周期
-        if self.check_words(self.lasttime_qwds, question) and \
-                ('Disease' in types or 'Symptom' in types or 'Alia' in types or 'Complication' in types):
+        if self.check_words(self.lasttime_qwds, question) and ('Disease' in types or 'Alia' in types):
             intention = "query_period"
             intentions.append(intention)
-        # 已知疾病或症状，查询治愈率
-        if self.check_words(self.cureprob_qwds, question) and \
-                ('Disease' in types or 'Alias' in types):
+        # 已知疾病，查询治愈率
+        if self.check_words(self.cureprob_qwds, question) and ('Disease' in types or 'Alias' in types):
             intention = "query_rate"
             intentions.append(intention)
-        # 已知疾病或症状，查询检查项目
-        if self.check_words(self.check_qwds, question) and \
-                ('Disease' in types or 'Alias' in types):
+        # 已知疾病，查询检查项目
+        if self.check_words(self.check_qwds, question) and ('Disease' in types or 'Alias' in types):
             intention = "query_checklist"
             intentions.append(intention)
         # 查询科室
@@ -245,11 +365,3 @@ class EntityExtractor:
         self.result["intentions"] = intentions
 
         return self.result
-
-
-# if __name__ == "__main__":
-#     handler = EntityExtractor()
-#     res = handler.entity_reg("肚子一直痛该怎么办")
-#     if not res:
-#         res = handler.find_sim_words("肚子一直痛该怎么办")
-#     print(res)
