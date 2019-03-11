@@ -315,7 +315,7 @@ class EntityExtractor:
         feature = np.concatenate((tfidf_feature, other_feature), axis=1)
 
         predicted = self.model_predict(feature, self.nb_model)
-        intentions.append([predicted[0]])
+        intentions.append(predicted[0])
 
         # 已知疾病，查询症状
         if self.check_words(self.symptom_qwds, question) and ('Disease' in types or 'Alia' in types):
