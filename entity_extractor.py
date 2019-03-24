@@ -320,47 +320,57 @@ class EntityExtractor:
         # 已知疾病，查询症状
         if self.check_words(self.symptom_qwds, question) and ('Disease' in types or 'Alia' in types):
             intention = "query_symptom"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 已知疾病或症状，查询治疗方法
         if self.check_words(self.cureway_qwds, question) and \
                 ('Disease' in types or 'Symptom' in types or 'Alias' in types or 'Complication' in types):
             intention = "query_cureway"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 已知疾病或症状，查询治疗周期
         if self.check_words(self.lasttime_qwds, question) and ('Disease' in types or 'Alia' in types):
             intention = "query_period"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 已知疾病，查询治愈率
         if self.check_words(self.cureprob_qwds, question) and ('Disease' in types or 'Alias' in types):
             intention = "query_rate"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 已知疾病，查询检查项目
         if self.check_words(self.check_qwds, question) and ('Disease' in types or 'Alias' in types):
             intention = "query_checklist"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 查询科室
         if self.check_words(self.belong_qwds, question) and \
                 ('Disease' in types or 'Symptom' in types or 'Alias' in types or 'Complication' in types):
             intention = "query_department"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 已知症状，查询疾病
         if self.check_words(self.disase_qwds, question) and ("Symptom" in types or "Complication" in types):
             intention = "query_disease"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
 
         # 若没有检测到意图，且已知疾病，则返回疾病的描述
         if not intentions and ('Disease' in types or 'Alias' in types):
             intention = "disease_describe"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 若是疾病和症状同时出现，且出现了查询疾病的特征词，则意图为查询疾病
         if self.check_words(self.disase_qwds, question) and ('Disease' in types or 'Alias' in types) \
                 and ("Symptom" in types or "Complication" in types):
             intention = "query_disease"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
         # 若没有识别出实体或意图则调用其它方法
         if not intentions or not types:
             intention = "QA_matching"
-            intentions.append(intention)
+            if intention not in intentions:
+                intentions.append(intention)
 
         self.result["intentions"] = intentions
 
